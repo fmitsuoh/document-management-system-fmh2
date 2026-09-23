@@ -11,6 +11,14 @@ async function parseErrorResponse(response) {
   }
 }
 
+async function request(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+  return response;
+}
+
 export async function uploadDocument({ file, owner }) {
   const formData = new FormData();
   formData.append('file', file);
@@ -18,28 +26,22 @@ export async function uploadDocument({ file, owner }) {
     formData.append('owner', owner);
   }
 
-  const response = await fetch(`${API_BASE_URL}/upload`, {
-    method: 'POST',
-    body: formData,
+  const response = await request(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
+  return response.json();
+}
+
+export async function listDocuments(currentUser) {
+  const response = await request(`${API_BASE_URL}/documents`, {
+    headers: { 'X-User-Id': currentUser },
   });
-
-  if (!response.ok) {
-    throw new Error(await parseErrorResponse(response));
-  }
-
   return response.json();
 }
 
-export async function listDocuments() {
-  const response = await fetch(`${API_BASE_URL}/documents`);
-
-  if (!response.ok) {
-    throw new Error(await parseErrorResponse(response));
-  }
-
-  return response.json();
+// Usa fetch (em vez de <a href>) para poder enviar o header de identificação do usuário.
+export async function downloadDocument(id, currentUser) {
+  const response = await request(`${API_BASE_URL}/documents/${encodeURIComponent(id)}/download`, {
+    headers: { 'X-User-Id': currentUser },
+  });
+  return response.blob();
 }
 
-export function getDownloadUrl(id) {
-  return `${API_BASE_URL}/documents/${id}/download`;
-}

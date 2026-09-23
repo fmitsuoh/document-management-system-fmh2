@@ -11,12 +11,18 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const documentRoutes = require('./routes/documentRoutes');
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(helmet());
+app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 
 // Endpoint de verificação de saúde.
@@ -24,7 +30,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+const uploadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env.UPLOAD_RATE_LIMIT) || 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/upload', uploadRateLimiter);
 app.use(documentRoutes);
+
+app.use(errorHandler);
 
 if (require.main === module) {
   app.listen(PORT, () => {

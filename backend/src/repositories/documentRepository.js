@@ -15,4 +15,9 @@ function findById(id) {
   return documents.get(id) || null;
 }
 
-module.exports = { save, findAll, findById };
+// Usado pelos testes para isolar o estado em memória entre execuções.
+function reset() {
+  documents.clear();
+}
+
+module.exports = { save, findAll, findById, reset };

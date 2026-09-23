@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { uploadDocument } from '../services/documentApi';
 
-export default function UploadComponent({ onUploaded }) {
+export default function UploadComponent({ currentUser, onUploaded }) {
   const [file, setFile] = useState(null);
-  const [owner, setOwner] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,9 +20,8 @@ export default function UploadComponent({ onUploaded }) {
     setError(null);
 
     try {
-      const document = await uploadDocument({ file, owner });
+      const document = await uploadDocument({ file, owner: currentUser });
       setFile(null);
-      setOwner('');
       event.target.reset();
       onUploaded?.(document);
     } catch (uploadError) {
@@ -42,22 +40,17 @@ export default function UploadComponent({ onUploaded }) {
           id="file"
           type="file"
           onChange={(event) => setFile(event.target.files[0])}
-        />
-      </div>
-      <div>
-        <label htmlFor="owner">Dono</label>
-        <input
-          id="owner"
-          type="text"
-          value={owner}
-          placeholder="Identificador do usuário"
-          onChange={(event) => setOwner(event.target.value)}
+          aria-describedby={error ? 'upload-error' : undefined}
         />
       </div>
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Enviando...' : 'Enviar'}
       </button>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p id="upload-error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

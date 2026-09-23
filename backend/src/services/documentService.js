@@ -2,19 +2,32 @@
 
 const { randomUUID } = require('node:crypto');
 const documentRepository = require('../repositories/documentRepository');
+const {
+  MissingFileError,
+  DocumentNotFoundError,
+  OwnerRequiredError,
+} = require('./documentErrors');
 
-class MissingFileError extends Error {
-  constructor() {
-    super('Arquivo obrigatório para upload.');
-    this.code = 'MISSING_FILE';
+function requireOwner(owner) {
+  if (!owner) {
+    throw new OwnerRequiredError();
   }
 }
 
-class DocumentNotFoundError extends Error {
-  constructor() {
-    super('Documento não encontrado.');
-    this.code = 'DOCUMENT_NOT_FOUND';
-  }
+// file é um DTO simples ({ originalName, storedName, storagePath, size, mimeType }),
+// desacoplado do formato interno do multer.
+function buildDocument(file, owner) {
+  return {
+    id: `doc_${randomUUID()}`,
+    originalName: file.originalName,
+    storedName: file.storedName,
+    storagePath: file.storagePath,
+    size: file.size,
+    mimeType: file.mimeType,
+    uploadedAt: new Date().toISOString(),
+    owner: owner || 'anonimo',
+    status: 'active',
+  };
 }
 
 function createDocument({ file, owner }) {
@@ -22,37 +35,40 @@ function createDocument({ file, owner }) {
     throw new MissingFileError();
   }
 
-  const document = {
-    id: `doc_${randomUUID()}`,
-    originalName: file.originalname,
-    storedName: file.filename,
-    storagePath: file.path,
-    size: file.size,
-    mimeType: file.mimetype,
-    uploadedAt: new Date().toISOString(),
-    owner: owner || 'anonimo',
-    status: 'active',
-  };
-
-  return documentRepository.save(document);
+  return documentRepository.save(buildDocument(file, owner));
 }
 
-function listDocuments() {
-  return documentRepository.findAll();
+function listDocuments(owner) {
+  requireOwner(owner);
+  return documentRepository.findAll().filter((document) => document.owner === owner);
 }
 
-function getDocumentForDownload(id) {
+function getDocumentForDownload(id, owner) {
+  requireOwner(owner);
   const document = documentRepository.findById(id);
-  if (!document) {
+  // Não revela se o documento existe quando pertence a outro dono.
+  if (!document || document.owner !== owner) {
     throw new DocumentNotFoundError();
   }
   return document;
+}
+
+function toPublicDocument(document) {
+  return {
+    id: document.id,
+    originalName: document.originalName,
+    size: document.size,
+    uploadedAt: document.uploadedAt,
+    owner: document.owner,
+  };
 }
 
 module.exports = {
   createDocument,
   listDocuments,
   getDocumentForDownload,
+  toPublicDocument,
   MissingFileError,
   DocumentNotFoundError,
+  OwnerRequiredError,
 };

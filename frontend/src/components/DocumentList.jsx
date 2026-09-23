@@ -2,7 +2,7 @@
 
 import DownloadButton from './DownloadButton';
 
-export default function DocumentList({ documents, isLoading, error }) {
+export default function DocumentList({ documents, isLoading, error, currentUser }) {
   if (isLoading) {
     return <p>Carregando documentos...</p>;
   }
@@ -34,7 +34,11 @@ export default function DocumentList({ documents, isLoading, error }) {
             <td>{new Date(document.uploadedAt).toLocaleString('pt-BR')}</td>
             <td>{document.owner}</td>
             <td>
-              <DownloadButton documentId={document.id} />
+              <DownloadButton
+                documentId={document.id}
+                originalName={document.originalName}
+                currentUser={currentUser}
+              />
             </td>
           </tr>
         ))}
